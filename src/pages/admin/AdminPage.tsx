@@ -149,7 +149,7 @@ export default function AdminPage() {
 
         {/* ── シリーズ管理 ── */}
         {tab === 1 && (
-          <Grid container spacing={3} justifyContent="center">
+          <Grid container spacing={3} sx={{ justifyContent: 'center' }}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>

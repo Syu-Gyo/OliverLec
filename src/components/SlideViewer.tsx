@@ -73,7 +73,7 @@ export default function SlideViewer({ url }: Props) {
     canvas.style.height = `${Math.round(scaled.height / dpr)}px`;
 
     const ctx = canvas.getContext('2d')!;
-    const task = page.render({ canvasContext: ctx, viewport: scaled });
+    const task = page.render({ canvas, canvasContext: ctx, viewport: scaled });
     renderTaskRef.current = task;
 
     try {

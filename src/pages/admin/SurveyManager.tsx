@@ -1,7 +1,7 @@
 import {
   Box, Typography, Button, TextField, Switch, FormControlLabel,
   CircularProgress, Alert, Paper, IconButton, Tooltip, Chip, Select,
-  MenuItem, FormControl, InputLabel, Divider,
+  MenuItem, FormControl, InputLabel,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -13,7 +13,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { useAllSurveysForSession, useSurveyForSession } from '../../hooks/useSurvey';
+import { useAllSurveysForSession } from '../../hooks/useSurvey';
 import SurveyResults from '../../components/SurveyResults';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import type { Session, Survey, SurveyQuestion, QuestionType } from '../../types';
@@ -40,11 +40,6 @@ export default function SurveyManager({ session }: Props) {
   const { profile } = useAuth();
   const { surveys, loading: surveysLoading, refetch: refetchSurveys } = useAllSurveysForSession(session.id);
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
-
-  // 選択中サーベイの質問
-  const { survey: activeSurvey, questions, refetch: refetchSurvey } = useSurveyForSession(
-    selectedSurveyId ? null : session.id  // admin は useSurveyForSession を活性のもの限定で使う
-  );
 
   // 選択中サーベイ（リストから直接選択のケース）
   const selectedSurvey = selectedSurveyId
@@ -200,7 +195,7 @@ export default function SurveyManager({ session }: Props) {
     await loadQuestions(sv.id);
   }
 
-  function openResults(sv: Survey, qs: SurveyQuestion[]) {
+  function openResults(qs: SurveyQuestion[]) {
     setResultsQuestions(qs);
     setResultsOpen(true);
   }
@@ -291,7 +286,7 @@ export default function SurveyManager({ session }: Props) {
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                       <Tooltip title="編集"><IconButton size="small" onClick={() => setEditSurvey({ title: selectedSurvey.title, description: selectedSurvey.description ?? '', is_active: selectedSurvey.is_active })}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                      <Tooltip title="結果を見る"><IconButton size="small" color="primary" onClick={() => openResults(selectedSurvey, managedQuestions)}><BarChartIcon fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title="結果を見る"><IconButton size="small" color="primary" onClick={() => openResults(managedQuestions)}><BarChartIcon fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="削除"><IconButton size="small" color="error" onClick={() => setConfirmSurvey(true)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                     </Box>
                   </Box>
