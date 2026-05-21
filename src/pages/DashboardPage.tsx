@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box, Toolbar, Typography, CircularProgress,
   Fab, Tooltip, IconButton, Chip, Button, List, ListItemButton,
@@ -15,6 +15,7 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 
+import { useLocation, useNavigate } from 'react-router-dom';
 import AppHeader from '../components/layout/AppHeader';
 import Sidebar from '../components/layout/Sidebar';
 import SessionCatalogGrid from '../components/SessionCatalogGrid';
@@ -168,6 +169,8 @@ function SessionOverview({
 
 export default function DashboardPage() {
   const { profile } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
@@ -178,6 +181,16 @@ export default function DashboardPage() {
 
   const startSession = useStartSession();
   const completeSession = useCompleteSession();
+
+  // /sessions/:id ページからの「学習を始める」で遷移してきた場合の処理
+  useEffect(() => {
+    const openSession = location.state?.openSession;
+    if (openSession) {
+      navigate('/', { replace: true, state: {} });
+      handleStartSession(openSession);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const [previewSession, setPreviewSession] = useState<Session | null>(null);
 

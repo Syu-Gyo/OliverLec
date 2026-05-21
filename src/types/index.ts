@@ -28,6 +28,8 @@ export interface Session {
   thumbnail_url: string | null;
   series_id: string | null;
   series_order: number;
+  instructors: string[];
+  published_at: string | null;
   created_at: string;
   updated_at: string;
   created_by: string;

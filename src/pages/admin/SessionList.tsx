@@ -94,6 +94,7 @@ export default function SessionList({ selectedId, onSelect, onEdit, onDeleted }:
   const orderedSeries = series.filter((s) => sessionsBySeries.has(s.id));
 
   function SessionRow({ session, indent = false }: { session: Session; indent?: boolean }) {
+    const isScheduled = session.published_at && new Date(session.published_at) > new Date();
     return (
       <ListItemButton
         selected={selectedId === session.id}
@@ -106,10 +107,17 @@ export default function SessionList({ selectedId, onSelect, onEdit, onDeleted }:
           </Typography>
         )}
         <ListItemText
-          primary={session.title}
+          primary={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, overflow: 'hidden' }}>
+              <Typography variant="body2" noWrap sx={{ flexShrink: 1, minWidth: 0 }}>{session.title}</Typography>
+              {isScheduled && (
+                <Chip label="公開予定" size="small" color="warning" variant="outlined"
+                  sx={{ fontSize: 9, height: 14, flexShrink: 0 }} />
+              )}
+            </Box>
+          }
           secondary={session.category ?? undefined}
           slotProps={{
-            primary: { noWrap: true, variant: 'body2' } as never,
             secondary: { noWrap: true, variant: 'caption' } as never,
           }}
         />

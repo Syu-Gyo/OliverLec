@@ -11,26 +11,53 @@ export function useUserSessions() {
   const fetch = useCallback(async () => {
     if (!user) { setSessions([]); setLoading(false); return; }
     setLoading(true);
+
+    // 進捗レコードを取得
     const { data } = await supabase
       .from('user_session_progress')
       .select('*, sessions(*)')
       .eq('user_id', user.id)
       .order('started_at', { ascending: false });
 
-    if (data) {
-      const result: SessionWithProgress[] = data.map((row: UserSessionProgress & { sessions: Session }) => ({
-        ...row.sessions,
-        progress: {
-          id: row.id,
-          user_id: row.user_id,
-          session_id: row.session_id,
-          status: row.status,
-          started_at: row.started_at,
-          completed_at: row.completed_at,
-        },
-      }));
-      setSessions(result);
+    if (!data) { setLoading(false); return; }
+
+    // 進捗マップ & 所属シリーズIDセットを構築
+    const progressMap = new Map<string, UserSessionProgress>();
+    const seriesIds = new Set<string>();
+    for (const row of data) {
+      progressMap.set(row.session_id, {
+        id: row.id, user_id: row.user_id, session_id: row.session_id,
+        status: row.status, started_at: row.started_at, completed_at: row.completed_at,
+      });
+      const s = row.sessions as Session | null;
+      if (s?.series_id) seriesIds.add(s.series_id);
     }
+
+    // 進捗のあるセッション一覧（シリーズなし含む）
+    const sessionMap = new Map<string, Session>();
+    for (const row of data) {
+      const s = row.sessions as Session | null;
+      if (s) sessionMap.set(s.id, s);
+    }
+
+    // 同じシリーズに属する未着手セッションも取得
+    if (seriesIds.size > 0) {
+      const { data: siblings } = await supabase
+        .from('sessions')
+        .select('*')
+        .in('series_id', Array.from(seriesIds));
+      for (const s of siblings ?? []) {
+        if (!sessionMap.has(s.id)) sessionMap.set(s.id, s as Session);
+      }
+    }
+
+    const result: SessionWithProgress[] = Array.from(sessionMap.values()).map((s) => ({
+      ...s,
+      instructors: s.instructors ?? [],
+      progress: progressMap.get(s.id) ?? null,
+    }));
+
+    setSessions(result);
     setLoading(false);
   }, [user]);
 

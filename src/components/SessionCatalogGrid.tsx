@@ -1,16 +1,22 @@
 import {
   Box, Typography, Card, CardContent, CardActions, CardActionArea,
-  Button, Chip, CircularProgress, Grid,
+  Button, Chip, CircularProgress, Grid, IconButton, Tooltip,
 } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import PersonIcon from '@mui/icons-material/Person';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import IosShareIcon from '@mui/icons-material/IosShare';
+import { useNavigate } from 'react-router-dom';
 import { useSessions } from '../hooks/useSessions';
 import { useSeries } from '../hooks/useSeries';
 import { useUserSessions } from '../hooks/useSessionProgress';
-import type { Session, Series, UserSessionProgress } from '../types';
+import { useProfiles } from '../hooks/useProfiles';
+import type { Session, Series, UserSessionProgress, Profile } from '../types';
 
 interface Props {
   searchQuery: string;
@@ -20,17 +26,32 @@ interface Props {
 }
 
 function SessionCard({
-  session, series, progress, isSelected, onPreview, onStartSession,
+  session, series, progress, isSelected, profilesMap, onPreview, onStartSession,
 }: {
   session: Session;
   series?: Series | null;
   progress: UserSessionProgress | undefined;
   isSelected: boolean;
+  profilesMap: Map<string, Profile>;
   onPreview: (s: Session) => void;
   onStartSession: (s: Session) => void;
 }) {
   const isCompleted = progress?.status === 'completed';
   const isStarted = progress?.status === 'in_progress';
+  const isScheduled = session.published_at != null && new Date(session.published_at) > new Date();
+
+  const scheduledLabel = isScheduled
+    ? new Date(session.published_at!).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' 公開予定'
+    : null;
+
+  const instructorNames = (session.instructors ?? [])
+    .map((id) => profilesMap.get(id))
+    .filter(Boolean)
+    .map((p) => p!.display_name ?? p!.email);
+
+  const publishDateLabel = session.published_at
+    ? new Date(session.published_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })
+    : null;
 
   return (
     <Card
@@ -65,7 +86,20 @@ function SessionCard({
         >
           <SchoolIcon sx={{ fontSize: 36, color: isCompleted ? 'success.main' : isStarted ? 'primary.main' : 'grey.300' }} />
           {isCompleted && <CheckCircleIcon sx={{ position: 'absolute', top: 6, right: 6, color: 'success.main', fontSize: 16 }} />}
-          {isStarted && <PlayCircleIcon sx={{ position: 'absolute', top: 6, right: 6, color: 'primary.main', fontSize: 16 }} />}
+          {isStarted && !isScheduled && <PlayCircleIcon sx={{ position: 'absolute', top: 6, right: 6, color: 'primary.main', fontSize: 16 }} />}
+          {isScheduled && (
+            <Box sx={{
+              position: 'absolute', top: 6, right: 6,
+              display: 'flex', alignItems: 'center', gap: 0.4,
+              bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.main',
+              borderRadius: 1, px: 0.75, py: 0.25,
+            }}>
+              <ScheduleIcon sx={{ fontSize: 11, color: 'warning.dark' }} />
+              <Typography sx={{ fontSize: 10, color: 'warning.dark', fontWeight: 700, lineHeight: 1 }}>
+                {scheduledLabel}
+              </Typography>
+            </Box>
+          )}
           {series && session.series_order > 0 && (
             <Chip
               label={`第${session.series_order}回`}
@@ -94,25 +128,57 @@ function SessionCard({
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
                 lineHeight: 1.5,
+                mb: (instructorNames.length > 0 || publishDateLabel) ? 1 : 0,
               }}
             >
               {session.description}
             </Typography>
           )}
+
+          {/* 担当者・公開日 */}
+          {(instructorNames.length > 0 || publishDateLabel) && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4, mt: session.description ? 0 : 0.5 }}>
+              {instructorNames.length > 0 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <PersonIcon sx={{ fontSize: 11, color: 'text.disabled', flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 11 }}>
+                    {instructorNames.join('、')}
+                  </Typography>
+                </Box>
+              )}
+              {publishDateLabel && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <CalendarTodayIcon sx={{ fontSize: 11, color: 'text.disabled', flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                    {isScheduled ? `${publishDateLabel} 公開予定` : `${publishDateLabel} 公開`}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
         </CardContent>
       </CardActionArea>
 
-      <CardActions sx={{ px: 2, pb: 1.5, pt: 0 }}>
+      <CardActions sx={{ px: 2, pb: 1.5, pt: 0, gap: 0.5 }}>
         <Button
           size="small"
           variant={isStarted || isCompleted ? 'outlined' : 'contained'}
           color={isCompleted ? 'success' : 'primary'}
           endIcon={<ArrowForwardIcon />}
           onClick={(e) => { e.stopPropagation(); onStartSession(session); }}
-          fullWidth
+          sx={{ flexGrow: 1 }}
         >
           {isCompleted ? 'もう一度見る' : isStarted ? '続きを学ぶ' : '学習を始める'}
         </Button>
+        <Tooltip title="詳細ページを開く">
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); window.open(`/sessions/${session.id}`, '_blank'); }}
+            sx={{ flexShrink: 0 }}
+          >
+            <IosShareIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </CardActions>
     </Card>
   );
@@ -122,9 +188,12 @@ export default function SessionCatalogGrid({ searchQuery, previewSessionId, onPr
   const { sessions, loading } = useSessions(searchQuery);
   const { series } = useSeries();
   const { sessions: userSessions } = useUserSessions();
+  const { profiles } = useProfiles();
+  const navigate = useNavigate();
 
   const progressMap = new Map(userSessions.map((s) => [s.id, s.progress ?? undefined]));
   const seriesMap = new Map(series.map((s) => [s.id, s]));
+  const profilesMap = new Map(profiles.map((p) => [p.id, p]));
 
   const gridSize = { xs: 12, sm: 6, md: previewSessionId ? 6 : 4, lg: previewSessionId ? 4 : 3 };
 
@@ -162,6 +231,7 @@ export default function SessionCatalogGrid({ searchQuery, previewSessionId, onPr
                 series={session.series_id ? seriesMap.get(session.series_id) : null}
                 progress={progressMap.get(session.id)}
                 isSelected={session.id === previewSessionId}
+                profilesMap={profilesMap}
                 onPreview={onPreview}
                 onStartSession={onStartSession}
               />
@@ -228,6 +298,11 @@ export default function SessionCatalogGrid({ searchQuery, previewSessionId, onPr
                   ? `${completedCount} / ${groupSessions.length} 完了`
                   : `全 ${groupSessions.length} 回`}
               </Typography>
+              <Tooltip title="シリーズ詳細ページを開く">
+                <IconButton size="small" onClick={() => navigate(`/series/${s.id}`)} sx={{ ml: 0.5, flexShrink: 0 }}>
+                  <IosShareIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
             </Box>
 
             <Grid container spacing={2.5}>
@@ -238,6 +313,7 @@ export default function SessionCatalogGrid({ searchQuery, previewSessionId, onPr
                     series={s}
                     progress={progressMap.get(session.id)}
                     isSelected={session.id === previewSessionId}
+                    profilesMap={profilesMap}
                     onPreview={onPreview}
                     onStartSession={onStartSession}
                   />
@@ -269,6 +345,7 @@ export default function SessionCatalogGrid({ searchQuery, previewSessionId, onPr
                   series={null}
                   progress={progressMap.get(session.id)}
                   isSelected={session.id === previewSessionId}
+                  profilesMap={profilesMap}
                   onPreview={onPreview}
                   onStartSession={onStartSession}
                 />

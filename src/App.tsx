@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/admin/AdminPage';
+import SeriesPage from './pages/SeriesPage';
+import SessionPage from './pages/SessionPage';
 import { isSupabaseConfigured } from './lib/supabase';
 
 const theme = createTheme({
@@ -57,6 +59,22 @@ export default function App() {
                 <AdminRoute>
                   <AdminPage />
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/series/:id"
+              element={
+                <ProtectedRoute>
+                  <SeriesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sessions/:id"
+              element={
+                <ProtectedRoute>
+                  <SessionPage />
+                </ProtectedRoute>
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
