@@ -9,9 +9,12 @@ import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import PersonIcon from '@mui/icons-material/Person';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { useMaterials } from '../hooks/useMaterials';
 import { useSessionProgress } from '../hooks/useSessionProgress';
 import { useSeries } from '../hooks/useSeries';
+import { useProfiles } from '../hooks/useProfiles';
 import type { Session } from '../types';
 
 export const DETAIL_PANEL_WIDTH = 300;
@@ -26,10 +29,22 @@ export default function SessionDetailPanel({ session, onClose, onStart }: Props)
   const { materials, loading } = useMaterials(session.id);
   const progress = useSessionProgress(session.id);
   const { series } = useSeries();
+  const { profiles } = useProfiles();
 
   const isCompleted = progress?.status === 'completed';
   const isStarted = progress?.status === 'in_progress';
+  const isScheduled = session.published_at != null && new Date(session.published_at) > new Date();
   const sessionSeries = session.series_id ? series.find((s) => s.id === session.series_id) : null;
+
+  const profilesMap = new Map(profiles.map((p) => [p.id, p]));
+  const instructorNames = (session.instructors ?? [])
+    .map((id) => profilesMap.get(id))
+    .filter(Boolean)
+    .map((p) => p!.display_name ?? p!.email);
+
+  const publishDateLabel = session.published_at
+    ? new Date(session.published_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })
+    : null;
 
   return (
     <Box
@@ -102,13 +117,35 @@ export default function SessionDetailPanel({ session, onClose, onStart }: Props)
 
           {/* 説明 */}
           {session.description ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, lineHeight: 1.7 }}>
               {session.description}
             </Typography>
           ) : (
-            <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.disabled" sx={{ mb: 1.5 }}>
               説明はありません
             </Typography>
+          )}
+
+          {/* 担当者・公開日 */}
+          {(instructorNames.length > 0 || publishDateLabel) && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 2, p: 1.25, bgcolor: 'grey.50', borderRadius: 1 }}>
+              {instructorNames.length > 0 && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <PersonIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {instructorNames.join('、')}
+                  </Typography>
+                </Box>
+              )}
+              {publishDateLabel && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <CalendarTodayIcon sx={{ fontSize: 14, color: isScheduled ? 'warning.main' : 'text.secondary', flexShrink: 0 }} />
+                  <Typography variant="caption" color={isScheduled ? 'warning.dark' : 'text.secondary'} sx={{ fontWeight: isScheduled ? 700 : 400 }}>
+                    {isScheduled ? `${publishDateLabel} 公開予定` : `${publishDateLabel} 公開`}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           )}
 
           <Divider sx={{ mb: 2 }} />

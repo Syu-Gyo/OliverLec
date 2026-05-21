@@ -2,7 +2,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Box, CircularProgress, Alert,
   FormControl, InputLabel, Select, MenuItem,
-  Collapse, Paper, Typography,
+  Collapse, Paper, Typography, Autocomplete,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSeries } from '../../hooks/useSeries';
+import { useProfiles } from '../../hooks/useProfiles';
 import type { Session } from '../../types';
 
 const NEW_SERIES_VALUE = '__new__';
@@ -20,15 +21,25 @@ interface Props {
   onClose: (saved: boolean) => void;
 }
 
+function toDatetimeLocal(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
+
 export default function SessionFormDialog({ open, session, onClose }: Props) {
   const { user } = useAuth();
   const { series, refetch: refetchSeries } = useSeries();
+  const { profiles } = useProfiles();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [seriesId, setSeriesId] = useState<string>('');
   const [seriesOrder, setSeriesOrder] = useState('1');
+  const [instructorIds, setInstructorIds] = useState<string[]>([]);
+  const [publishedAt, setPublishedAt] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -47,6 +58,8 @@ export default function SessionFormDialog({ open, session, onClose }: Props) {
       setCategory(session?.category ?? '');
       setSeriesId(session?.series_id ?? '');
       setSeriesOrder(String(session?.series_order ?? 1));
+      setInstructorIds(session?.instructors ?? []);
+      setPublishedAt(toDatetimeLocal(session?.published_at ?? null));
       setNewSeriesTitle('');
       setNewSeriesCategory('');
       setNewSeriesOrder('1');
@@ -89,6 +102,8 @@ export default function SessionFormDialog({ open, session, onClose }: Props) {
       category: category.trim() || null,
       series_id: seriesId || null,
       series_order: seriesId ? (parseInt(seriesOrder) || 1) : 0,
+      instructors: instructorIds,
+      published_at: publishedAt ? new Date(publishedAt).toISOString() : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -103,6 +118,8 @@ export default function SessionFormDialog({ open, session, onClose }: Props) {
     if (err) { setError(err.message); return; }
     onClose(true);
   }
+
+  const selectedInstructors = profiles.filter((p) => instructorIds.includes(p.id));
 
   return (
     <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
@@ -216,6 +233,29 @@ export default function SessionFormDialog({ open, session, onClose }: Props) {
             fullWidth
             multiline
             rows={3}
+          />
+
+          {/* 担当者（複数選択） */}
+          <Autocomplete
+            multiple
+            options={profiles}
+            getOptionLabel={(p) => p.display_name ? `${p.display_name}（${p.email}）` : p.email}
+            value={selectedInstructors}
+            onChange={(_, newValue) => setInstructorIds((newValue as typeof profiles).map((p) => p.id))}
+            renderInput={(params) => (
+              <TextField {...params} label="担当者（任意・複数選択可）" placeholder="メールアドレスで検索" />
+            )}
+          />
+
+          {/* 公開予定日時 */}
+          <TextField
+            label="公開予定日時（空欄は即時公開）"
+            type="datetime-local"
+            value={publishedAt}
+            onChange={(e) => setPublishedAt(e.target.value)}
+            fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText={publishedAt ? '設定した日時まで担当者と管理者のみ閲覧できます' : '空欄の場合は全員に即時公開されます'}
           />
         </Box>
       </DialogContent>
