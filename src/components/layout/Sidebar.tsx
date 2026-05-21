@@ -36,7 +36,7 @@ function StatusChip({ status }: { status: 'in_progress' | 'completed' }) {
 
 export default function Sidebar({
   open, selectedSessionId, selectedMaterialId, showSurvey,
-  onSelectSession, onSelectMaterial, onSelectSurvey, onShowCatalog, refreshKey,
+  onSelectSession, onSelectMaterial, onSelectSurvey, refreshKey,
 }: Props) {
   const { sessions, loading, refetch } = useUserSessions();
   const { series } = useSeries(refreshKey);

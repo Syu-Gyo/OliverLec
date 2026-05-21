@@ -160,7 +160,7 @@ export default function SurveyResults({ open, surveyTitle, surveyId, questions, 
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>個別回答一覧</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {responses.map((r, idx) => (
+                {responses.map((r) => (
                   <Paper key={r.id} variant="outlined" sx={{ p: 1.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                       <Typography variant="caption" sx={{ fontWeight: 700 }}>
